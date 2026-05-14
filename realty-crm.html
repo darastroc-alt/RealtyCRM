@@ -1,0 +1,57 @@
+realty-crm/
+├── .gitignore
+├── .env.example
+├── docker-compose.yml
+├── README.md
+├── backend/
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── main.py
+│   ├── alembic.ini
+│   ├── alembic/
+│   │   ├── env.py
+│   │   └── versions/
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── core/
+│   │   │   ├── __init__.py
+│   │   │   ├── config.py
+│   │   │   ├── security.py
+│   │   │   └── backup.py
+│   │   ├── db/
+│   │   │   ├── __init__.py
+│   │   │   └── database.py
+│   │   ├── models/
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── client.py
+│   │   │   ├── property.py
+│   │   │   ├── deal.py
+│   │   │   └── task.py
+│   │   ├── schemas/
+│   │   │   ├── __init__.py
+│   │   │   ├── user.py
+│   │   │   ├── client.py
+│   │   │   ├── property.py
+│   │   │   ├── deal.py
+│   │   │   └── task.py
+│   │   ├── api/
+│   │   │   ├── __init__.py
+│   │   │   ├── deps.py
+│   │   │   ├── auth.py
+│   │   │   ├── agents.py
+│   │   │   ├── clients.py
+│   │   │   ├── properties.py
+│   │   │   ├── deals.py
+│   │   │   ├── tasks.py
+│   │   │   └── dashboard.py
+│   │   ├── utils/
+│   │   │   ├── __init__.py
+│   │   │   ├── file_handler.py
+│   │   │   └── exporter.py
+│   │   └── static/
+│   │       └── photos/ (создается автоматически)
+├── scripts/
+│   ├── seed.py
+│   └── backup_manual.py
+└── backups/ (создается автоматически)

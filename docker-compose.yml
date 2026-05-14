@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: crm_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-crm_user}
+      POSTGRES_PASSWORD: ${DB_PASS:-secure_password}
+      POSTGRES_DB: ${DB_NAME:-crm_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backups:/backups:rw
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-crm_user} -d ${DB_NAME:-crm_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - crm_network
+
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: crm_backend
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app
+      - ./backend/app/static/photos:/app/app/static/photos
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-crm_user}:${DB_PASS:-secure_password}@${DB_HOST:-db}:${DB_PORT:-5432}/${DB_NAME:-crm_db}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
+      BACKUP_EMAIL: ${BACKUP_EMAIL}
+      SMTP_SERVER: ${SMTP_SERVER}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      UPLOAD_DIR: ${UPLOAD_DIR}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - crm_network
+
+  backup:
+    image: prodrigestivill/postgres-backup-local:15
+    container_name: crm_backup_service
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_DB: ${DB_NAME:-crm_db}
+      POSTGRES_USER: ${DB_USER:-crm_user}
+      POSTGRES_PASSWORD: ${DB_PASS:-secure_password}
+      SCHEDULE: "@daily"
+      BACKUP_DIR: /backups
+      BACKUP_KEEP_DAYS: 7
+      SMTP_HOST: ${SMTP_SERVER}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USERNAME: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASS}
+      SENDMAIL: ${BACKUP_EMAIL}
+      BACKUP_WITH_OWNER: "true"
+    volumes:
+      - ./backups:/backups
+      - ./backend/app/static/photos:/photos:ro
+    depends_on:
+      - db
+    networks:
+      - crm_network
+
+volumes:
+  postgres_data:
+
+networks:
+  crm_network:
+    driver: bridge
