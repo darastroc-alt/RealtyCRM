@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏠 RealtyCRM</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: #f5f7fa; color: #333; line-height: 1.5; padding: 16px; max-width: 1200px; margin: 0 auto; }
+    header { background: #2c3e50; color: white; padding: 16px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+    header h1 { font-size: 1.4rem; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .tab { padding: 10px 16px; background: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500; transition: 0.2s; }
+    .tab.active { background: #3498db; color: white; }
+    .tab:hover { background: #ecf0f1; }
+    .tab.active:hover { background: #2980b9; }
+    .card { background: white; border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    button { background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: 0.2s; }
+    button:hover { background: #2980b9; }
+    button.danger { background: #e74c3c; }
+    button.danger:hover { background: #c0392b; }
+    button.success { background: #27ae60; }
+    button.success:hover { background: #219a52; }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: #f8f9fa; font-weight: 600; }
+    tr:hover { background: #f8f9fa; }
+    .status { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .status.active { background: #d4edda; color: #155724; }
+    .status.deposit { background: #fff3cd; color: #856404; }
+    .status.sold { background: #f8d7da; color: #721c24; }
+    .status.archive { background: #e2e3e5; color: #383d41; }
+    .stage-badge { display: inline-block; padding: 4px 12px; background: #e9ecef; border-radius: 20px; font-size: 12px; margin: 2px 0; }
+    .search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .search-bar input { flex: 1; min-width: 200px; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .stat-number { font-size: 2rem; font-weight: bold; color: #3498db; }
+    .stat-label { color: #666; font-size: 0.9rem; }
+    .photo-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .photo-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; }
+    .hidden { display: none; }
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .modal-content { background: white; border-radius: 10px; padding: 24px; max-width: 600px; width: 100%; max-height: 90vh; overflow-y: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .close-modal { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; }
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+      th, td { padding: 8px; font-size: 14px; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🏠 RealtyCRM</h1>
+  <div class="btn-group">
+    <button onclick="exportData()">📥 Экспорт в Excel</button>
+    <button onclick="clearAll()" class="danger">🗑 Очистить всё</button>
+  </div>
+</header>
+
+<!-- Вкладки -->
+<div class="tabs">
+  <button class="tab active" onclick="showTab('dashboard')">📊 Дашборд</button>
+  <button class="tab" onclick="showTab('properties')">🏢 Объекты</button>
+  <button class="tab" onclick="showTab('clients')">👥 Клиенты</button>
+  <button class="tab" onclick="showTab('deals')">🔄 Сделки</button>
+  <button class="tab" onclick="showTab('tasks')">✅ Задачи</button>
+</div>
+
+<!-- Дашборд -->
+<div id="dashboard" class="tab-content">
+  <div class="dashboard-grid">
+    <div class="stat-card">
+      <div class="stat-number" id="count-properties">0</div>
+      <div class="stat-label">Активных объектов</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="count-clients">0</div>
+      <div class="stat-label">Клиентов</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="count-deals">0</div>
+      <div class="stat-label">Сделок в работе</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="count-tasks">0</div>
+      <div class="stat-label">Задач на сегодня</div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h3>🔄 Последние сделки</h3>
+    <div id="dashboard-deals"></div>
+  </div>
+  
+  <div class="card">
+    <h3>✅ Задачи на сегодня</h3>
+    <div id="dashboard-tasks"></div>
+  </div>
+</div>
+
+<!-- Объекты -->
+<div id="properties" class="tab-content hidden">
+  <div class="card">
+    <h3>➕ Добавить объект</h3>
+    <div class="form-grid">
+      <input type="text" id="prop-address" placeholder="Адрес *">
+      <select id="prop-type">
+        <option value="apartment">Квартира</option>
+        <option value="house">Дом</option>
+        <option value="commercial">Коммерция</option>
+        <option value="land">Участок</option>
+      </select>
+      <input type="number" id="prop-price" placeholder="Цена (₽)">
+      <input type="number" id="prop-area" placeholder="Площадь (м²)">
+      <input type="number" id="prop-rooms" placeholder="Комнаты">
+      <input type="text" id="prop-floor" placeholder="Этаж/этажность">
+      <select id="prop-source">
+        <option value="cian">Циан</option>
+        <option value="avito">Авито</option>
+        <option value="friends">Знакомые</option>
+        <option value="own">Свой сайт</option>
+      </select>
+      <select id="prop-status">
+        <option value="active">🟢 Активно</option>
+        <option value="deposit">🟡 Задаток</option>
+        <option value="in_deal">🔵 В сделке</option>
+        <option value="sold">🔴 Продано</option>
+        <option value="archive">⚫ Архив</option>
+      </select>
+    </div>
+    <input type="file" id="prop-photos" accept="image/*" multiple>
+    <div class="photo-preview" id="prop-photos-preview"></div>
+    <button onclick="addProperty()" class="success" style="margin-top:12px">💾 Сохранить объект</button>
+  </div>
+  
+  <div class="search-bar">
+    <input type="text" id="search-properties" placeholder="🔍 Поиск по адресу..." oninput="renderProperties()">
+    <select id="filter-status" onchange="renderProperties()">
+      <option value="">Все статусы</option>
+      <option value="active">Активно</option>
+      <option value="deposit">Задаток</option>
+      <option value="sold">Продано</option>
+    </select>
+  </div>
+  
+  <div id="properties-list"></div>
+</div>
+
+<!-- Клиенты -->
+<div id="clients" class="tab-content hidden">
+  <div class="card">
+    <h3>➕ Добавить клиента</h3>
+    <div class="form-grid">
+      <input type="text" id="client-name" placeholder="ФИО *">
+      <input type="tel" id="client-phone" placeholder="Телефон *">
+      <select id="client-type">
+        <option value="seller">🏠 Продавец</option>
+        <option value="buyer">🔍 Покупатель</option>
+        <option value="landlord">🗝 Арендодатель</option>
+        <option value="tenant">🔑 Арендатор</option>
+      </select>
+      <input type="text" id="client-manager" placeholder="Менеджер">
+    </div>
+    <textarea id="client-comment" placeholder="Комментарий" rows="2"></textarea>
+    <button onclick="addClient()" class="success" style="margin-top:12px">💾 Сохранить клиента</button>
+  </div>
+  
+  <div class="search-bar">
+    <input type="text" id="search-clients" placeholder="🔍 Поиск по имени или телефону..." oninput="renderClients()">
+  </div>
+  
+  <div id="clients-list"></div>
+</div>
+
+<!-- Сделки -->
+<div id="deals" class="tab-content hidden">
+  <div class="card">
+    <h3>➕ Новая сделка</h3>
+    <div class="form-grid">
+      <select id="deal-property"><option>Выберите объект</option></select>
+      <select id="deal-buyer"><option>Выберите покупателя</option></select>
+      <input type="text" id="deal-agent" placeholder="Менеджер">
+    </div>
+    <button onclick="addDeal()" class="success">🚀 Создать сделку</button>
+  </div>
+  
+  <div id="deals-list"></div>
+</div>
+
+<!-- Задачи -->
+<div id="tasks" class="tab-content hidden">
+  <div class="card">
+    <h3>➕ Новая задача</h3>
+    <div class="form-grid">
+      <input type="text" id="task-title" placeholder="Что сделать? *">
+      <input type="datetime-local" id="task-due">
+      <select id="task-client"><option>Привязать к клиенту</option></select>
+    </div>
+    <button onclick="addTask()" class="success">💾 Добавить задачу</button>
+  </div>
+  
+  <div id="tasks-list"></div>
+</div>
+
+<script>
+// === Хранилище данных ===
+const DB = {
+  get: (key) => JSON.parse(localStorage.getItem('crm_' + key) || '[]'),
+  set: (key, value) => localStorage.setItem('crm_' + key, JSON.stringify(value)),
+  add: (key, item) => {
+    const data = DB.get(key);
+    item.id = Date.now();
+    item.created = new Date().toISOString();
+    data.unshift(item);
+    DB.set(key, data);
+    return item;
+  },
+  update: (key, id, updates) => {
+    const data = DB.get(key);
+    const idx = data.findIndex(i => i.id == id);
+    if (idx >= 0) {
+      data[idx] = { ...data[idx], ...updates, updated: new Date().toISOString() };
+      DB.set(key, data);
+      return true;
+    }
+    return false;
+  },
+  delete: (key, id) => {
+    const data = DB.get(key).filter(i => i.id != id);
+    DB.set(key, data);
+  }
+};
+
+// === Переключение вкладок ===
+function showTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(tabId).classList.remove('hidden');
+  event.target.classList.add('active');
+  if (tabId === 'dashboard') renderDashboard();
+  if (tabId === 'properties') renderProperties();
+  if (tabId === 'clients') renderClients();
+  if (tabId === 'deals') renderDeals();
+  if (tabId === 'tasks') renderTasks();
+}
+
+// === Объекты ===
+function addProperty() {
+  const photos = document.getElementById('prop-photos').files;
+  const photoUrls = [];
+  
+  const save = () => {
+    DB.add('properties', {
+      address: document.getElementById('prop-address').value,
+      type: document.getElementById('prop-type').value,
+      price: +document.getElementById('prop-price').value,
+      area: +document.getElementById('prop-area').value,
+      rooms: +document.getElementById('prop-rooms').value,
+      floor: document.getElementById('prop-floor').value,
+      source: document.getElementById('prop-source').value,
+      status: document.getElementById('prop-status').value,
+      photos: photoUrls
+    });
+    // Очистка формы
+    document.getElementById('prop-address').value = '';
+    document.getElementById('prop-photos-preview').innerHTML = '';
+    renderProperties();
+    alert('✅ Объект добавлен!');
+  };
+  
+  if (photos.length > 0) {
+    let loaded = 0;
+    Array.from(photos).slice(0, 5).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        photoUrls.push(e.target.result);
+        loaded++;
+        if (loaded === Math.min(photos.length, 5)) save();
+      };
+      reader.readAsDataURL(file);
+    });
+  } else save();
+}
+
+function renderProperties() {
+  const list = document.getElementById('properties-list');
+  const search = document.getElementById('search-properties').value.toLowerCase();
+  const filter = document.getElementById('filter-status').value;
+  
+  let items = DB.get('properties').filter(p => 
+    (!search || p.address.toLowerCase().includes(search)) &&
+    (!filter || p.status === filter)
+  );
+  
+  list.innerHTML = items.map(p => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap">
+        <div>
+          <strong>${p.address}</strong><br>
+          <small>${p.type} • ${p.area} м² • ${p.rooms} комн.</small><br>
+          <strong>${p.price?.toLocaleString('ru')} ₽</strong>
+        </div>
+        <span class="status ${p.status}">${p.status}</span>
+      </div>
+      ${p.photos?.slice(0,3).map(src => `<img src="${src}" class="photo-thumb">`).join('') || ''}
+      <div class="btn-group" style="margin-top:10px">
+        <button onclick="DB.delete('properties',${p.id});renderProperties()">🗑</button>
+      </div>
+    </div>
+  `).join('') || '<p style="color:#666;padding:20px">Нет объектов</p>';
+  
+  // Обновить счетчики
+  document.getElementById('count-properties').textContent = DB.get('properties').filter(p=>p.status==='active').length;
+}
+
+// === Клиенты ===
+function addClient() {
+  DB.add('clients', {
+    name: document.getElementById('client-name').value,
+    phone: document.getElementById('client-phone').value,
+    type: document.getElementById('client-type').value,
+    manager: document.getElementById('client-manager').value,
+    comment: document.getElementById('client-comment').value
+  });
+  document.getElementById('client-name').value = '';
+  document.getElementById('client-phone').value = '';
+  renderClients();
+  alert('✅ Клиент добавлен!');
+}
+
+function renderClients() {
+  const list = document.getElementById('clients-list');
+  const search = document.getElementById('search-clients').value.toLowerCase();
+  
+  let items = DB.get('clients').filter(c => 
+    !search || c.name.toLowerCase().includes(search) || c.phone.includes(search)
+  );
+  
+  list.innerHTML = items.map(c => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap">
+        <div>
+          <strong>${c.name}</strong><br>
+          <small>📞 ${c.phone}</small><br>
+          <small>${c.type} • Менеджер: ${c.manager || '-'}</small><br>
+          ${c.comment ? `<small style="color:#666">${c.comment}</small>` : ''}
+        </div>
+      </div>
+      <div class="btn-group" style="margin-top:10px">
+        <button onclick="DB.delete('clients',${c.id});renderClients()">🗑</button>
+      </div>
+    </div>
+  `).join('') || '<p style="color:#666;padding:20px">Нет клиентов</p>';
+  
+  document.getElementById('count-clients').textContent = DB.get('clients').length;
+  
+  // Обновить списки в сделках/задачах
+  updateSelects();
+}
+
+// === Сделки ===
+function addDeal() {
+  DB.add('deals', {
+    property_id: +document.getElementById('deal-property').value,
+    buyer_id: +document.getElementById('deal-buyer').value,
+    agent: document.getElementById('deal-agent').value,
+    stage: 'new_contact',
+    logs: [{ stage: 'new_contact', date: new Date().toISOString(), comment: 'Сделка создана' }]
+  });
+  renderDeals();
+  alert('✅ Сделка создана!');
+}
+
+const STAGES = {
+  new_contact: '1️⃣ Новый контакт',
+  showing: '2️⃣ Показ',
+  deposit: '3️⃣ Задаток',
+  mortgage: '4️⃣ Ипотека',
+  docs: '5️⃣ Документы',
+  closing: '6️⃣ МФЦ/Банк',
+  closed: '✅ Закрыто'
+};
+
+function renderDeals() {
+  const list = document.getElementById('deals-list');
+  const deals = DB.get('deals');
+  const props = DB.get('properties');
+  const clients = DB.get('clients');
+  
+  list.innerHTML = deals.map(d => {
+    const prop = props.find(p => p.id == d.property_id);
+    const buyer = clients.find(c => c.id == d.buyer_id);
+    return `
+      <div class="card">
+        <strong>${prop?.address || 'Объект удалён'}</strong> → ${buyer?.name || 'Покупатель удалён'}<br>
+        <small>Менеджер: ${d.agent}</small>
+        <div style="margin:10px 0">
+          ${Object.entries(STAGES).map(([key, label]) => `
+            <button class="stage-badge" style="background:${d.stage===key?'#3498db':'#e9ecef'};color:${d.stage===key?'white':'#333'};border:none;padding:4px 10px;border-radius:15px;font-size:12px;cursor:pointer;margin:2px" 
+              onclick="changeStage(${d.id},'${key}')">${label}</button>
+          `).join('')}
+        </div>
+        <div class="btn-group">
+          <button onclick="DB.delete('deals',${d.id});renderDeals()" class="danger">🗑 Удалить</button>
+        </div>
+      </div>
+    `;
+  }).join('') || '<p style="color:#666;padding:20px">Нет сделок</p>';
+  
+  document.getElementById('count-deals').textContent = deals.filter(d=>d.stage!=='closed').length;
+}
+
+function changeStage(dealId, newStage) {
+  const deals = DB.get('deals');
+  const deal = deals.find(d => d.id == dealId);
+  if (deal) {
+    deal.stage = newStage;
+    deal.logs = deal.logs || [];
+    deal.logs.unshift({ stage: newStage, date: new Date().toISOString() });
+    DB.set('deals', deals);
+    renderDeals();
+  }
+}
+
+// === Задачи ===
+function addTask() {
+  DB.add('tasks', {
+    title: document.getElementById('task-title').value,
+    due: document.getElementById('task-due').value,
+    client_id: +document.getElementById('task-client').value || null,
+    completed: false
+  });
+  document.getElementById('task-title').value = '';
+  renderTasks();
+  alert('✅ Задача добавлена!');
+}
+
+function renderTasks() {
+  const list = document.getElementById('tasks-list');
+  const tasks = DB.get('tasks');
+  const clients = DB.get('clients');
+  const today = new Date().toISOString().slice(0,16);
+  
+  list.innerHTML = tasks.map(t => {
+    const client = clients.find(c => c.id == t.client_id);
+    const isToday = t.due && t.due.slice(0,16) <= today;
+    return `
+      <div class="card" style="${t.completed?'opacity:0.6':''}">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="checkbox" ${t.completed?'checked':''} onchange="toggleTask(${t.id})" style="width:auto">
+          <div>
+            <strong style="${t.completed?'text-decoration:line-through':''}">${t.title}</strong><br>
+            <small>📅 ${t.due ? new Date(t.due).toLocaleString('ru') : 'Без срока'}</small>
+            ${client ? `<br><small>👤 ${client.name}</small>` : ''}
+          </div>
+        </div>
+        ${isToday && !t.completed ? '<span style="color:#e74c3c;font-size:12px">⚠ Сегодня!</span>' : ''}
+        <div class="btn-group" style="margin-top:10px">
+          <button onclick="DB.delete('tasks',${t.id});renderTasks()" class="danger">🗑</button>
+        </div>
+      </div>
+    `;
+  }).join('') || '<p style="color:#666;padding:20px">Нет задач</p>';
+  
+  document.getElementById('count-tasks').textContent = tasks.filter(t => !t.completed && t.due && t.due.slice(0,10) === new Date().toISOString().slice(0,10)).length;
+}
+
+function toggleTask(id) {
+  const tasks = DB.get('tasks');
+  const task = tasks.find(t => t.id == id);
+  if (task) {
+    task.completed = !task.completed;
+    DB.set('tasks', tasks);
+    renderTasks();
+  }
+}
+
+// === Дашборд ===
+function renderDashboard() {
+  renderProperties(); // обновит счетчики
+  renderClients();
+  renderDeals();
+  renderTasks();
+  
+  // Последние сделки
+  const deals = DB.get('deals').slice(0,5);
+  const props = DB.get('properties');
+  const clients = DB.get('clients');
+  
+  document.getElementById('dashboard-deals').innerHTML = deals.map(d => {
+    const prop = props.find(p => p.id == d.property_id);
+    const buyer = clients.find(c => c.id == d.buyer_id);
+    return `<div style="padding:8px 0;border-bottom:1px solid #eee">
+      <strong>${prop?.address || '?'}</strong> → ${buyer?.name || '?'}<br>
+      <span class="stage-badge">${STAGES[d.stage]}</span>
+    </div>`;
+  }).join('') || '<small style="color:#666">Нет сделок</small>';
+  
+  // Задачи на сегодня
+  const today = new Date().toISOString().slice(0,10);
+  const todayTasks = DB.get('tasks').filter(t => !t.completed && t.due?.startsWith(today));
+  document.getElementById('dashboard-tasks').innerHTML = todayTasks.map(t => 
+    `<div style="padding:8px 0;border-bottom:1px solid #eee">☐ ${t.title}</div>`
+  ).join('') || '<small style="color:#666">Задач на сегодня нет 🎉</small>';
+}
+
+// === Вспомогательные функции ===
+function updateSelects() {
+  const props = DB.get('properties').filter(p=>p.status==='active');
+  const clients = DB.get('clients').filter(c=>c.type==='buyer');
+  
+  const propSelect = document.getElementById('deal-property');
+  propSelect.innerHTML = '<option value="">Выберите объект</option>' + 
+    props.map(p => `<option value="${p.id}">${p.address} • ${p.price?.toLocaleString('ru')}₽</option>`).join('');
+  
+  const buyerSelect = document.getElementById('deal-buyer');
+  buyerSelect.innerHTML = '<option value="">Выберите покупателя</option>' + 
+    clients.map(c => `<option value="${c.id}">${c.name} • ${c.phone}</option>`).join('');
+  
+  const taskClient = document.getElementById('task-client');
+  taskClient.innerHTML = '<option value="">Не привязывать</option>' + 
+    DB.get('clients').map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function exportData() {
+  const data = {
+    properties: DB.get('properties'),
+    clients: DB.get('clients'),
+    deals: DB.get('deals'),
+    tasks: DB.get('tasks'),
+    exported: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `realty-crm-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  alert('📥 Данные экспортированы! Сохраните файл в надёжном месте.');
+}
+
+function clearAll() {
+  if (confirm('⚠ Вы уверены? Все данные будут удалены без возможности восстановления!')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
+
+// === Предпросмотр фото ===
+document.getElementById('prop-photos')?.addEventListener('change', function(e) {
+  const preview = document.getElementById('prop-photos-preview');
+  preview.innerHTML = '';
+  Array.from(e.target.files).slice(0,5).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = document.createElement('img');
+      img.src = ev.target.result;
+      img.className = 'photo-thumb';
+      preview.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// === Инициализация ===
+document.addEventListener('DOMContentLoaded', () => {
+  renderDashboard();
+  updateSelects();
+});
+</script>
+
+</body>
+</html>
